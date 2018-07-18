@@ -64,6 +64,7 @@ enum TOUCH_DEBUG {
 	LPWG_COORDINATES          = (1U << 16),   /* 65536 */
 };
 
+#ifdef DEBUG_TOUCH_CORE
 #define TOUCH_I(fmt, args...)					\
 	pr_info("[Touch] "					\
 			fmt, ##args)
@@ -78,6 +79,11 @@ extern u32 touch_debug_mask;
 		if (unlikely(touch_debug_mask & (condition)))	\
 			pr_info("[Touch] " fmt, ##args);	\
 	} while (0)
+#else
+#define TOUCH_I(fmt, args...)
+#define TOUCH_E(fmt, args...)
+#define TOUCH_D(condition, fmt, args...)
+#endif
 
 #define TOUCH_DEBUG_SHOW_FILE
 #ifdef TOUCH_DEBUG_SHOW_FILE
