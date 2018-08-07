@@ -2004,11 +2004,16 @@ static void use_pmi8996_tables(struct smbchg_chip *chip)
 	chip->tables.aicl_rerun_period_table = aicl_rerun_period;
 	chip->tables.aicl_rerun_period_len = ARRAY_SIZE(aicl_rerun_period);
 }
-
+bool bBlockChargeOnOff = false;
 #define CMD_CHG_REG	0x42
 #define EN_BAT_CHG_BIT		BIT(1)
 static int smbchg_charging_en(struct smbchg_chip *chip, bool en)
 {
+	/* block only "enable charge", allow disabling charge always */
+	if(bBlockChargeOnOff && en) {
+		pr_info("bBlockChargeOnOff en=%s\n", en ?"1":"0");
+		return -1;
+	}
 	/* The en bit is configured active low */
 	return smbchg_masked_write(chip, chip->bat_if_base + CMD_CHG_REG,
 			EN_BAT_CHG_BIT, en ? 0 : EN_BAT_CHG_BIT);
@@ -5052,7 +5057,6 @@ static ssize_t at_chg_status_store(struct device *dev,
 		const char *buf, size_t count)
 {
 	struct smbchg_chip *chip = dev_get_drvdata(dev);
-	int ret = 0;
 
 	if (!count) {
 		pr_err("[Diag] count 0 error\n");
@@ -5074,10 +5078,21 @@ static ssize_t at_chg_status_store(struct device *dev,
 		pr_info("[Diag] start charging\n");
 		vote(chip->battchg_suspend_votable,
 			BATTCHG_USER_EN_VOTER, false, 0);
+	} else if (strncmp(buf, "b", 1) == 0) {
+		bBlockChargeOnOff = true;
+		pr_info("bBlockChargeOnOff = true\n");
+		return 1;
+	} else if (strncmp(buf, "u", 1) == 0) {
+		bBlockChargeOnOff = false;
+		pr_info("bBlockChargeOnOff = false\n");
+		return 1;
+	} else if (strncmp(buf, "on", 2) == 0) {
+		smbchg_charging_en(chip, true);
+		return 1;
+	} else if (strncmp(buf, "off", 3) == 0) {
+		smbchg_charging_en(chip, false);
+		return 1;
 	}
-
-	if (ret)
-		return -EINVAL;
 
 	power_supply_changed(&chip->batt_psy);
 

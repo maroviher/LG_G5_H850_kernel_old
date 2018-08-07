@@ -172,6 +172,27 @@ enum battchg_enable_voters {
 	NUM_BATTCHG_EN_VOTERS,
 };
 
+static int iAhmedIbatMax = -1;
+static ssize_t ahmedibatlim_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	int cnt;
+	if (strncmp(buf, "limit=", 6) == 0) {
+		cnt = sscanf(&buf[6], "%i", &iAhmedIbatMax);
+                if ((cnt == 1) && (iAhmedIbatMax > 0)){
+			pr_info("iAhmedIbatMax set to %d\n", iAhmedIbatMax);
+			lgcc_set_ibat_current(THERMAL_FCC_VOTER, true, iAhmedIbatMax);
+		}
+		else {
+			pr_info("iAhmedIbatMax, removed limit\n");
+			iAhmedIbatMax = -1;
+		}
+		return 1;
+	}
+}
+static DEVICE_ATTR(ahmedibatlim, S_IWUSR, NULL, ahmedibatlim_store);
+
 static struct lge_charging_controller *the_controller;
 
 static int is_hvdcp_present(void)
@@ -760,6 +781,11 @@ static int lgcc_set_ibat_limit(const char *val,
 		return 0;
 	}
 
+	if ((iAhmedIbatMax != -1) && (lgcc_ibat_limit > iAhmedIbatMax)) {
+		pr_info("ahmed ibat limiter lgcc_ibat_limit=%d, iAhmedIbatMax=%d", 
+			lgcc_ibat_limit, iAhmedIbatMax);
+		return 0;
+	}
 	if (lgcc_ibat_limit == DCP_CHG_MAX_IBAT ||
 			lgcc_ibat_limit == HVDCP_CHG_MAX_IBAT) {
 		pr_err("set lgcc_ibat_limit to DEFAULT_FCC(3100mA)\n");
@@ -809,7 +835,8 @@ static int lgcc_set_ibat_hvdcp_limit(const char *val,
 		lgcc_ibat_hvdcp_limit = HVDCP_CHG_MAX_IBAT;
 		pr_err("set lgcc_ibat_hvdcp_limit to DEFAULT_FCC(3000mA)\n");
 		lgcc_set_ibat_current(THERMAL_FCC_VOTER,
-			true, lgcc_ibat_hvdcp_limit);
+			true,
+			iAhmedIbatMax != -1 ? min(iAhmedIbatMax, lgcc_ibat_hvdcp_limit) : lgcc_ibat_hvdcp_limit);
 	}
 	else {
 		pr_err("set lgcc_ibat_hvdcp_limit to %d\n",
@@ -1232,6 +1259,8 @@ static int lge_charging_controller_probe(struct platform_device *pdev)
 #endif
 
 	lgcc_is_probed = 1;
+
+	device_create_file(&pdev->dev, &dev_attr_ahmedibatlim);
 
 	pr_info("LG Charging controller probe done~!!\n");
 
