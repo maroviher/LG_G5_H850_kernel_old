@@ -510,7 +510,7 @@ static ssize_t qpnp_pattern_onoff(const char* string_onoff, size_t string_size)
 	qpnp_pattern_play(onoff_pattern);
 	return string_size;
 }
-
+EXPORT_SYMBOL(qpnp_pattern_onoff);
 static ssize_t qpnp_pattern_scale(const char* string_scale, size_t string_size)
 {
 	if (sscanf(string_scale, "%d", &qpnp_brightness_scale) != 1) {

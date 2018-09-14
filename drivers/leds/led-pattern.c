@@ -48,6 +48,32 @@ static ssize_t led_pattern_blink(struct device *dev, struct device_attribute *at
 }
 static DEVICE_ATTR(blink_patterns, 0200, NULL, led_pattern_blink);
 
+static bool bWakeLockLed = true;
+static ssize_t WakeLockLed(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	if(size && buf[0] == '1')
+		bWakeLockLed = true;
+	else
+		bWakeLockLed = false;
+	return size;
+}
+static DEVICE_ATTR(WakeLockLed_switch, 0200, NULL, WakeLockLed);
+
+void led_off(void)
+{
+        if( bWakeLockLed && led_pattern_operations && led_pattern_operations->onoff )
+                led_pattern_operations->onoff("0x000000", 8);
+}
+
+void led_on(void)
+{
+	if( bWakeLockLed && led_pattern_operations && led_pattern_operations->onoff )
+                led_pattern_operations->onoff("0xFFFFFF", 8);
+}
+EXPORT_SYMBOL(led_off);
+EXPORT_SYMBOL(led_on);
+
 static ssize_t led_pattern_onoff(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
@@ -88,6 +114,7 @@ static int __init leds_pattern_init(void)
 	if (device_create_file(led_pattern_device, &dev_attr_setting) < 0)
 		printk("Failed to create device file(%s)!\n", dev_attr_setting.attr.name);
 
+	device_create_file(led_pattern_device, &dev_attr_WakeLockLed_switch);
 	if (device_create_file(led_pattern_device, &dev_attr_blink_patterns) < 0)
 		printk("Failed to create device file(%s)!\n", dev_attr_blink_patterns.attr.name);
 

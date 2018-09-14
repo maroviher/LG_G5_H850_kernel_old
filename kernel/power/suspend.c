@@ -32,6 +32,8 @@
 #include <linux/wakeup_reason.h>
 
 #include "power.h"
+extern void led_on(void);
+extern void led_off(void);
 
 const char *pm_labels[] = { "mem", "standby", "freeze", NULL };
 const char *pm_states[PM_SUSPEND_MAX];
@@ -192,6 +194,7 @@ static void platform_resume_end(suspend_state_t state)
 		freeze_ops->end();
 	else if (suspend_ops->end)
 		suspend_ops->end();
+	led_on();
 }
 
 static void platform_recover(suspend_state_t state)
@@ -275,7 +278,7 @@ void __weak arch_suspend_enable_irqs(void)
 static int suspend_enter(suspend_state_t state, bool *wakeup)
 {
 	int error, last_dev;
-
+	led_off();
 	error = platform_suspend_prepare(state);
 	if (error)
 		goto Platform_finish;
